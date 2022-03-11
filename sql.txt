@@ -1,3 +1,0 @@
-INSERT INTO public."avgDailyTemps"(
-	temp, hum, "feelsLike", date)
-	SELECT AVG("temp") AS "temp", AVG("hum") AS "hum", AVG("feelsLike") AS "feelsLike", "date" FROM "temps" AS "temps" WHERE "temps"."flag" = false AND ("temps"."date" >= '2022-03-07' AND "temps"."date" <= '2022-03-07') GROUP BY "date" ORDER BY "temps"."date" ASC;
