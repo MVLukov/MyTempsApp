@@ -1,0 +1,27 @@
+version: "3"
+
+services:
+  node:
+    image: mytemps_app
+    container_name: "mytemps_app"
+    ports:
+      - 3000:3000
+    depends_on:
+      - postgres
+    links:
+      - postgres:postgres
+    restart: always
+    volumes:
+      - ./view:/usr/src/app/view
+      # - ./etc/localtime:/etc/localtime:ro
+  postgres:
+    image: postgres
+    # ports:
+    #   - 5436:5432
+    environment:
+      POSTGRES_DB: "" 
+      POSTGRES_USER: ""
+      POSTGRES_PASSWORD: ""
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    restart: always

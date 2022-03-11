@@ -1,0 +1,16 @@
+{
+  "name": "tempsTS",
+  "version": "1.0.0",
+  "main": "./build/app.js",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "config": "^3.3.7",
+    "dayjs": "^1.10.7",
+    "express": "^4.17.2",
+    "pg": "^8.7.1",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.15.0"
+  }
+}

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-gauge@1.0.6/dist/gauge.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        margin: 5px;
+        padding: 5px;
+      }
+
+      .chart-container {
+        height: 80vh;
+      }
+
+      .noDisplay {
+        display: none;
+      }
+
+      .gauge-container {
+        height: 100px;
+        width: 100px;
+        display: block;
+        position: relative;
+      }
+
+      .gauge-container > .gauge .dial {
+        stroke: #eee;
+        stroke-width: 2;
+        fill: rgba(0, 0, 0, 0);
+      }
+
+      .gauge-container > .gauge .value {
+        stroke: rgba(0, 0, 0, 0);
+        stroke-width: 2;
+        fill: rgba(0, 0, 0, 0);
+      }
+
+      .gauge-container > .gauge .value-text {
+        fill: black;
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 1em;
+      }
+
+      .gauge {
+        width: 500px;
+        height: 350px;
+        margin-bottom: -120px;
+        position: relative;
+      }
+
+      .form-control {
+        width: 10% !important;
+        display: inline;
+      }
+
+      button {
+        margin-top: -5px;
+      }
+
+      a {
+        color: white;
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: white;
+        text-decoration: none;
+      }
+
+      @media only screen and (max-width: 1200px) {
+        .gauge {
+          width: 325px;
+          height: 350px;
+          margin-bottom: -120px;
+          position: relative;
+        }
+
+        .gauge {
+          width: 325px;
+          height: 350px;
+          margin-bottom: -120px;
+          position: relative;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <form class="form-group">
+      <select id="yearPicker" class="form-control">
+        <option value="null">Year</option>
+      </select>
+      <select id="monthPicker" class="noDisplay form-control">
+        <option value="null">Month</option>
+      </select>
+      <select id="datePicker" class="noDisplay form-control">
+        <option value="null">Date</option>
+      </select>
+      <button class="btn btn-primary" onclick="getVal(event)">Reset</button>
+      <button class="btn btn-primary">
+        <a href="/monthly">Monthly stats</a>
+      </button>
+    </form>
+
+    <br />
+    <div class="container border">
+      <div class="row">
+        <div id="gauge2" class="col-md-6 col-sm-12 border"></div>
+        <div id="gauge3" class="col-md-6 col-sm-12 border"></div>
+        <div class="chart-container col-sm-12 border" id="clear">
+          <canvas id="chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      var gauge1 = Gauge(document.getElementById("gauge2"), {
+        min: 0,
+        max: 50,
+        dialStartAngle: 180,
+        dialEndAngle: 0,
+        color: function (value) {
+          if (value > 0 && value < 20) {
+            return "#5ee432";
+          } else if (value >= 20 && value < 25) {
+            return "#ffd300";
+          } else if (value >= 25 && value < 30) {
+            return "#f7aa38";
+          } else {
+            return "#ef4655";
+          }
+        },
+      });
+
+      var gauge2 = Gauge(document.getElementById("gauge3"), {
+        min: 0,
+        max: 50,
+        dialStartAngle: 180,
+        dialEndAngle: 0,
+        color: function (value) {
+          if (value > 0 && value < 20) {
+            return "#5ee432";
+          } else if (value >= 20 && value < 40) {
+            return "#ffd300";
+          } else if (value >= 40 && value < 50) {
+            return "#f7aa38";
+          } else {
+            return "#ef4655";
+          }
+        },
+      });
+
+      function load_gauge() {
+        fetch("/api/daily/lastTemp").then(async (res) => {
+          let data = await res.json();
+          gauge1.setValue(data[0]);
+        });
+
+        fetch("/api/daily/lastHum").then(async (res) => {
+          let data = await res.json();
+          gauge2.setValue(data[0]);
+        });
+      }
+
+      var myChart;
+      var ctx = document.getElementById("chart").getContext("2d");
+
+      fetch("/api/daily/getYear").then(async (res) => {
+        let data = await res.json();
+        let select = document.getElementById("yearPicker");
+        let y = 0;
+        let testArr = [];
+        for (let i = 0; i < data.length; i++) {
+          let option = document.createElement("option");
+          option.text = `${data[i]}`;
+          option.value = data[i];
+          option.id = "optGetVal";
+          select.add(option);
+        }
+      });
+
+      let selectYear = document.getElementById("yearPicker");
+      let selectMonth = document.getElementById("monthPicker");
+      let selectDate = document.getElementById("datePicker");
+
+      selectYear.addEventListener("change", (event) => {
+        if (event.target.value !== "null") {
+          fetch(`/api/daily/getMonth?year=${event.target.value}`).then(
+            async (res) => {
+              let data = await res.json();
+              for (let i = selectMonth.options.length; i >= 1; i--) {
+                selectMonth.remove(i);
+              }
+              for (let i = selectDate.options.length; i >= 1; i--) {
+                selectDate.remove(i);
+              }
+
+              selectMonth.classList.add("noDisplay");
+              selectDate.classList.add("noDisplay");
+              selectMonth.classList.remove("noDisplay");
+
+              for (let i = 0; i < data.length; i++) {
+                let option = document.createElement("option");
+                option.text = `${event.target.value}-${data[i]}`;
+                option.value = `${event.target.value}-${data[i]}`;
+                option.id = "optGetVal";
+                selectMonth.add(option);
+              }
+            }
+          );
+        }
+      });
+
+      selectMonth.addEventListener("change", (event) => {
+        if (event.target.value !== "null") {
+          let date = event.target.value.split("-");
+          fetch(`/api/daily/getDay?year=${date[0]}&month=${date[1]}`).then(
+            async (res) => {
+              let data = await res.json();
+              selectDate.classList.remove("noDisplay");
+
+              for (let i = selectDate.options.length; i >= 1; i--) {
+                selectDate.remove(i);
+              }
+
+              for (let i = 0; i < data.length; i++) {
+                let option = document.createElement("option");
+                option.text = `${event.target.value}-${data[i]}`;
+                option.value = `${event.target.value}-${data[i]}`;
+                option.id = "optGetVal";
+                selectDate.add(option);
+              }
+            }
+          );
+        }
+      });
+
+      selectDate.addEventListener("change", (event) => {
+        if (event.target.value !== "null") {
+          console.log(event.target.value);
+          fetch(`/api/daily/loadData?date=${event.target.value}`).then(
+            async (res) => {
+              let data = await res.json();
+              let dataTemp = [];
+              let dataHum = [];
+              let dataTime = [];
+              let dataFeelsLike = [];
+
+              data.forEach((e) => {
+                dataTemp.push(e.temp);
+                dataHum.push(e.hum);
+                dataTime.push(e.time);
+                dataFeelsLike.push(e.feelsLike);
+              });
+
+              myChart.destroy();
+              myChart = await new Chart(ctx, {
+                type: "line",
+                showLine: true,
+                data: {
+                  labels: dataTime,
+                  datasets: [
+                    {
+                      data: dataFeelsLike,
+                      backgroundColor: ["rgba(50, 205, 50, 0.6)"],
+                      label: "feelsLike",
+                      fill: "origin",
+                    },
+                    {
+                      data: dataTemp,
+                      backgroundColor: ["rgba(255, 0, 0, 0.6)"],
+                      label: "temp",
+                      fill: "origin",
+                    },
+                    {
+                      data: dataHum,
+                      backgroundColor: ["rgba(0, 0, 255, 0.6)"],
+                      label: "hum",
+                      fill: "1",
+                    },
+                  ],
+                },
+                options: {
+                  maintainAspectRatio: false,
+                },
+              });
+            }
+          );
+
+          fetch(`api/daily/loadGauge?date=${event.target.value}`).then(
+            async (res) => {
+              let data = await res.json();
+              gauge1.setValue(data[0].temp);
+              gauge2.setValue(data[0].hum);
+            }
+          );
+        }
+      });
+
+      function getVal(event) {
+        event.preventDefault();
+        let timeNow = new Date();
+        let date = timeNow.getDate();
+        let month = timeNow.getMonth();
+        let year = timeNow.getFullYear();
+
+        for (let i = selectMonth.options.length; i >= 1; i--) {
+          selectMonth.remove(i);
+        }
+
+        for (let i = selectDate.options.length; i >= 1; i--) {
+          selectDate.remove(i);
+        }
+
+        selectMonth.classList.add("noDisplay");
+        selectDate.classList.add("noDisplay");
+        selectMonth.selectedIndex = 0;
+        selectYear.selectedIndex = 0;
+        myChart.destroy();
+        load();
+      }
+
+      async function load() {
+        let dataTemp = [];
+        let dataHum = [];
+        let dataTime = [];
+        let dataFeelsLike = [];
+
+        await fetch("/api/daily/temp").then(async (res) => {
+          dataTemp = await res.json();
+          console.log(dataTemp);
+        });
+
+        await fetch("/api/daily/feelsLike").then(async (res) => {
+          dataFeelsLike = await res.json();
+        });
+
+        await fetch("/api/daily/hum").then(async (res) => {
+          dataHum = await res.json();
+        });
+
+        await fetch("/api/daily/time").then(async (res) => {
+          dataTime = await res.json();
+        });
+
+        myChart = await new Chart(ctx, {
+          type: "line",
+          showLine: true,
+          data: {
+            labels: dataTime,
+            datasets: [
+              {
+                data: dataFeelsLike,
+                backgroundColor: ["rgba(50, 205, 50, 0.6)"],
+                label: "feelsLike",
+                fill: "origin",
+              },
+              {
+                data: dataTemp,
+                backgroundColor: ["rgba(255, 0, 0, 0.6)"],
+                label: "temp",
+                fill: "origin",
+              },
+              {
+                data: dataHum,
+                backgroundColor: ["rgba(0, 0, 255, 0.6)"],
+                label: "hum",
+                fill: "1",
+              },
+            ],
+          },
+          options: {
+            maintainAspectRatio: false,
+          },
+        });
+      }
+
+      load();
+      load_gauge();
+      setInterval(() => {
+        myChart.destroy();
+        load();
+        load_gauge();
+      }, 10 * 60 * 1000);
+    </script>
+  </body>
+</html>

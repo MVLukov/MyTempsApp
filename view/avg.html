@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/svg-gauge@1.0.6/dist/gauge.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+      body {
+        margin: 5px;
+        padding: 5px;
+      }
+      .chart-container {
+        height: 80vh;
+      }
+      .noDisplay {
+        display: none;
+      }
+      .gauge-container {
+        height: 100px;
+        width: 100px;
+        display: block;
+        position: relative;
+      }
+      .gauge-container > .gauge .dial {
+        stroke: #eee;
+        stroke-width: 2;
+        fill: rgba(0, 0, 0, 0);
+      }
+      .gauge-container > .gauge .value {
+        stroke: rgba(0, 0, 0, 0);
+        stroke-width: 2;
+        fill: rgba(0, 0, 0, 0);
+      }
+      .gauge-container > .gauge .value-text {
+        fill: black;
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 1em;
+      }
+      .gauge {
+        width: 500px;
+        height: 350px;
+        margin-bottom: -120px;
+        position: relative;
+      }
+      .form-control {
+        width: 10% !important;
+        display: inline;
+      }
+      button {
+        margin-top: -5px;
+      }
+      a {
+        color: white;
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: white;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <form class="form-group">
+      <select id="yearPicker" class="form-control">
+        <option value="null">Year</option>
+      </select>
+      <select id="monthPicker" class="noDisplay form-control">
+        <option value="null">Month</option>
+      </select>
+      <button class="btn btn-primary">
+        <a href="/">Back</a>
+      </button>
+    </form>
+    <div class="container border">
+      <div class="row">
+        <div id="gauge2" class="col-sm-6 border"></div>
+        <div id="gauge3" class="col-sm-6 border"></div>
+        <div class="chart-container col-sm-12 border" id="clear">
+          <canvas id="chart"></canvas>
+        </div>
+      </div>
+    </div>
+    <script>
+      var myChart;
+      var ctx = document.getElementById("chart").getContext("2d");
+      myChart = new Chart(ctx, {});
+      var gauge1 = Gauge(document.getElementById("gauge2"), {
+        min: 0,
+        max: 50,
+        dialStartAngle: 180,
+        dialEndAngle: 0,
+        color: function (value) {
+          if (value > 0 && value < 20) {
+            return "#5ee432";
+          } else if (value > 20 && value < 25) {
+            return "#ffd300";
+          } else if (value > 25 && value < 30) {
+            return "#f7aa38";
+          } else {
+            return "#ef4655";
+          }
+        },
+      });
+      var gauge2 = Gauge(document.getElementById("gauge3"), {
+        min: 0,
+        max: 50,
+        dialStartAngle: 180,
+        dialEndAngle: 0,
+        color: function (value) {
+          if (value > 0 && value < 20) {
+            return "#5ee432";
+          } else if (value > 20 && value < 40) {
+            return "#ffd300";
+          } else if (value > 40 && value < 50) {
+            return "#f7aa38";
+          } else {
+            return "#ef4655";
+          }
+        },
+      });
+
+      fetch("api/monthly/getYear").then(async (res) => {
+        let data = await res.json();
+        let select = document.getElementById("yearPicker");
+
+        for (let i = 0; i < data.length; i++) {
+          let option = document.createElement("option");
+          option.text = `${data[i]}`;
+          option.value = data[i];
+          option.id = "optGetVal";
+          select.add(option);
+        }
+      });
+      let selectYear = document.getElementById("yearPicker");
+      let selectMonth = document.getElementById("monthPicker");
+
+      selectYear.addEventListener("change", (event) => {
+        if (event.target.value !== "null") {
+          fetch(`api/monthly/getMonth?year=${event.target.value}`).then(
+            async (res) => {
+              let data = await res.json();
+              for (let i = selectMonth.options.length; i >= 1; i--) {
+                selectMonth.remove(i);
+              }
+
+              selectMonth.classList.add("noDisplay");
+              selectMonth.classList.remove("noDisplay");
+
+              myChart.destroy();
+              gauge1.setValue(null);
+              gauge2.setValue(null);
+
+              for (let i = 0; i < data.length; i++) {
+                let option = document.createElement("option");
+                option.text = `${event.target.value}-${data[i]}`;
+                option.value = `${event.target.value}-${data[i]}`;
+                option.id = "optGetVal";
+                selectMonth.add(option);
+              }
+            }
+          );
+        }
+      });
+
+      selectMonth.addEventListener("change", (event) => {
+        if (event.target.value !== "null") {
+          console.log(event.target.value);
+          fetch(`api/monthly/temp?date=${event.target.value}`).then(
+            async (res) => {
+              let dataDate = [];
+              let dataTemp = [];
+              let dataHum = [];
+              let dataFeelsLike = [];
+
+              let data = await res.json();
+              console.log(data);
+              data.forEach((element) => {
+                dataDate.push(element.date);
+                dataTemp.push(element.temp);
+                dataHum.push(element.hum);
+                dataFeelsLike.push(element.feelsLike);
+              });
+
+
+              myChart.destroy();
+              myChart = await new Chart(ctx, {
+                type: "line",
+                showLine: true,
+                data: {
+                  labels: dataDate,
+                  datasets: [
+                    {
+                      data: dataFeelsLike,
+                      backgroundColor: ["rgba(50, 205, 50, 0.6)"],
+                      label: "feelsLike",
+                      fill: "origin",
+                    },
+                    {
+                      data: dataTemp,
+                      backgroundColor: ["rgba(255, 0, 0, 0.6)"],
+                      label: "temp",
+                      fill: "origin",
+                    },
+                    {
+                      data: dataHum,
+                      backgroundColor: ["rgba(0, 0, 255, 0.6)"],
+                      label: "hum",
+                      fill: "-1",
+                    },
+                  ],
+                },
+                options: {
+                  maintainAspectRatio: false,
+                  scales: {
+                    yAxes: [
+                      {
+                        stacked: false,
+                      },
+                    ],
+                    xAxes: [
+                      {
+                        ticks: {
+                          reverse: false,
+                        },
+                      },
+                    ],
+                  },
+                },
+              });
+            }
+          );
+          fetch(`api/monthly/loadGauge?date=${event.target.value}`).then(async (res) => {
+            let data = await res.json();
+
+            gauge1.setValue(data[0].temp);
+            gauge2.setValue(data[0].hum);
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
